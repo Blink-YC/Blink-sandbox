@@ -10,11 +10,10 @@ export default function Home() {
             {/* Logo */}
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
-                <span className="text-white font-bold text-sm">BC</span>
+                <span className="text-white font-bold text-sm">BP</span>
               </div>
               <div className="flex items-baseline">
-                <span className="text-gray-900 font-semibold text-lg">BlueCollar</span>
-                <span className="text-gray-500 text-sm ml-1">MVP</span>
+                <span className="text-gray-900 font-semibold text-lg">Blink Platform</span>
               </div>
             </div>
             
@@ -41,7 +40,7 @@ export default function Home() {
 
 
       {/* Hero Section */}
-      <section className="py-20 bg-white">
+      <section className="py-11 bg-white">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             {/* Left Side - Text Content */}
@@ -58,6 +57,9 @@ export default function Home() {
               
               {/* CTA Buttons */}
               <div className="flex flex-col gap-4 mb-8">
+                <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 whitespace-nowrap w-full sm:w-auto font-semibold shadow-lg">
+                  Join Waitlist Now
+                </Button>
                 <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 whitespace-nowrap w-full sm:w-auto">
                   I Need Something Fixed
                 </Button>
@@ -284,7 +286,7 @@ export default function Home() {
       </section>
 
       {/* Statistics Section */}
-      <section className="py-20 bg-gray-900">
+      {/* <section className="py-20 bg-gray-900">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
@@ -305,7 +307,7 @@ export default function Home() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Bottom CTA Section */}
       <section className="py-20 bg-white">
@@ -316,6 +318,9 @@ export default function Home() {
           </p>
           
           <div className="flex flex-col gap-4 justify-center max-w-4xl mx-auto">
+            <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 whitespace-nowrap w-full sm:w-auto font-semibold shadow-lg">
+              Join Waitlist Now
+            </Button>
             <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 whitespace-nowrap w-full sm:w-auto">
               I Need Something Fixed
             </Button>
@@ -333,7 +338,7 @@ export default function Home() {
       <footer className="border-t border-gray-200 bg-white py-8">
         <div className="container mx-auto px-4 text-center">
           <p className="text-gray-500">
-            © 2024 BlueCollar Platform. All rights reserved.
+            © 2025 Blink Platform.
           </p>
         </div>
       </footer>
