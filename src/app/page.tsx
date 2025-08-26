@@ -79,7 +79,7 @@ export default function Home() {
                   I Need Something Fixed
                 </Button>
                 <Button variant="outline" size="lg" className="border-gray-300 text-gray-700 px-8 py-3 whitespace-nowrap w-full sm:w-auto">
-                  I'm Looking for Work
+                  I&apos;m Looking for Work
                 </Button>
                 <Button variant="outline" size="lg" className="border-gray-300 text-gray-700 px-8 py-3 whitespace-nowrap w-full sm:w-auto">
                   I Need Workers
@@ -155,7 +155,7 @@ export default function Home() {
               </CardHeader>
               <CardContent className="text-center">
                 <p className="text-gray-600">
-                  Toggle your 'Ready Now' status and manage your calendar to get matched with jobs instantly.
+                  Toggle your &apos;Ready Now&apos; status and manage your calendar to get matched with jobs instantly.
                 </p>
               </CardContent>
             </Card>
