@@ -39,23 +39,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Platform Demo Banner */}
-      <div className="bg-gray-100 py-4">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">BlueCollar Platform Demo</h2>
-            <p className="text-gray-600 text-sm">
-              Explore different pages of the blue-collar platform. Click the buttons below to navigate between different user experiences.
-            </p>
-          </div>
-          <div className="flex flex-wrap justify-center gap-4 max-w-4xl mx-auto">
-            <Button className="bg-blue-600 text-white px-6 py-2 rounded whitespace-nowrap">Landing Page</Button>
-            <Button variant="outline" className="border-gray-300 text-gray-700 px-6 py-2 rounded whitespace-nowrap">Worker Profile</Button>
-            <Button variant="outline" className="border-gray-300 text-gray-700 px-6 py-2 rounded whitespace-nowrap">Employer Dashboard</Button>
-            <Button variant="outline" className="border-gray-300 text-gray-700 px-6 py-2 rounded whitespace-nowrap">Job Marketplace</Button>
-          </div>
-        </div>
-      </div>
 
       {/* Hero Section */}
       <section className="py-20 bg-white">
