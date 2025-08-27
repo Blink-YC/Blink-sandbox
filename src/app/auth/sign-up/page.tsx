@@ -1,0 +1,184 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
+
+export default function SignUpPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  // OTP removed for signup
+  const [verifyEmailPending, setVerifyEmailPending] = useState(false);
+
+  const buttonDiv = useRef<HTMLDivElement>(null)
+  const [showFallback, setShowFallback] = useState(false)
+
+  useEffect(() => {
+    const client_id = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
+    if (!client_id) {
+      setShowFallback(true)
+      return
+    }
+
+    let attempts = 0
+    const maxAttempts = 30
+    const tryInit = () => {
+      // @ts-ignore
+      const google = (window as any).google
+      if (google && google.accounts && google.accounts.id) {
+        google.accounts.id.initialize({
+          client_id,
+          callback: async (response: any) => {
+            const supabase = createClient()
+            const { credential } = response
+            try {
+              if (!credential) {
+                await supabase.auth.signInWithOAuth({
+                  provider: 'google',
+                  options: { redirectTo: `${window.location.origin}/auth/callback` },
+                })
+                return
+              }
+              setLoading(true)
+              const { error } = await supabase.auth.signInWithIdToken({
+                provider: 'google',
+                token: credential,
+              })
+              setLoading(false)
+              if (error) throw error
+              window.location.assign('/')
+            } catch (e: any) {
+              await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: { redirectTo: `${window.location.origin}/auth/callback` },
+              })
+            }
+          },
+        })
+
+        if (buttonDiv.current) {
+          google.accounts.id.renderButton(buttonDiv.current, {
+            theme: 'outline',
+            size: 'large',
+            width: 320,
+          })
+        }
+        // One Tap disabled intentionally for now
+      } else if (attempts < maxAttempts) {
+        attempts += 1
+        setTimeout(tryInit, 100)
+      } else {
+        setShowFallback(true)
+      }
+    }
+
+    tryInit()
+  }, [])
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    const supabase = createClient();
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
+    setLoading(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    // If email confirmation is required, Supabase returns null session.
+    if (!data.session) {
+      setVerifyEmailPending(true);
+      return;
+    }
+    window.location.assign("/");
+  }
+
+  // OTP helpers removed
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        <h1 className="text-2xl font-semibold mb-6">Create your account</h1>
+
+        {verifyEmailPending && (
+          <div className="mb-6 rounded border border-gray-200 p-4 bg-gray-50">
+            <p className="text-sm text-gray-700 mb-3">
+              We sent a verification link to <span className="font-medium">{email}</span>. Open it to verify your email and finish creating your account.
+            </p>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={async () => {
+                setLoading(true);
+                setError(null);
+                const supabase = createClient();
+                const { error } = await supabase.auth.resend({
+                  type: 'signup',
+                  email,
+                  options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+                });
+                setLoading(false);
+                if (error) setError(error.message);
+              }}
+              className="w-full border border-gray-300 rounded px-3 py-2"
+            >
+              {loading ? 'Resending…' : 'Resend verification email'}
+            </button>
+            {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+          </div>
+        )}
+
+        <div ref={buttonDiv} className="mb-4 flex justify-center" />
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-px bg-gray-200 flex-1" />
+          <span className="text-xs text-gray-500">or</span>
+          <div className="h-px bg-gray-200 flex-1" />
+        </div>
+        {
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Email</label>
+              <input
+                type="email"
+                className="w-full border border-gray-300 rounded px-3 py-2"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Password</label>
+              <input
+                type="password"
+                className="w-full border border-gray-300 rounded px-3 py-2"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+              />
+            </div>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-2"
+            >
+              {loading ? "Creating account..." : "Sign up"}
+            </button>
+          </form>
+        }
+        <p className="text-sm text-gray-600 mt-4">
+          Already have an account? <Link href="/auth/sign-in" className="text-blue-600">Sign in</Link>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+

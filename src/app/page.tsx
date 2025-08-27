@@ -27,12 +27,12 @@ export default function Home() {
             
             {/* Right Side Buttons */}
             <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm" className="border-gray-300 text-gray-700 whitespace-nowrap">
+              <a href="/auth/sign-in" className="border border-gray-300 text-gray-700 rounded h-9 px-3 flex items-center whitespace-nowrap">
                 Sign In
-              </Button>
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap">
+              </a>
+              <a href="/auth/sign-up" className="bg-blue-600 hover:bg-blue-700 text-white rounded h-9 px-3 flex items-center whitespace-nowrap">
                 Get Started
-              </Button>
+              </a>
             </div>
           </div>
         </div>
