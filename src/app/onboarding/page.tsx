@@ -4,13 +4,14 @@ import OnboardingClient from "./OnboardingClient";
 
 export const dynamic = "force-dynamic"; // helpful for auth-driven pages
 
-export default function Page({
+export default async function Page({
   searchParams,
 }: {
-  searchParams: { role?: "customer" | "worker" | "business" };
+  // Next 15: searchParams can be a Promise; await before using
+  searchParams: Promise<{ role?: "customer" | "worker" | "business" }>;
 }) {
-  const role =
-    (searchParams.role ?? "customer") as "customer" | "worker" | "business";
+  const sp = await searchParams;
+  const role = (sp.role ?? "customer") as "customer" | "worker" | "business";
 
   return (
     <Suspense fallback={<div className="p-8 text-sm text-gray-600">Loading…</div>}>

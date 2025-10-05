@@ -1,7 +1,7 @@
 // app/setup-profile/SetupProfileClient.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -20,16 +20,15 @@ type ProfileDefaults = Partial<{
   company_name: string;
 }>;
 
-export function SetupProfileClient({
-  initialRole,
-}: {
-  initialRole: Role;
-}) {
+export function SetupProfileClient({ initialRole }: { initialRole: Role }) {
   const router = useRouter();
   const role = initialRole;
 
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<ProfileDefaults>({});
+
+  // ✅ Use a ref to guarantee a real HTMLFormElement
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Prefill based on role
   useEffect(() => {
@@ -70,9 +69,7 @@ export function SetupProfileClient({
           .eq("user_id", user.id)
           .maybeSingle();
 
-        if (cp) {
-          setProfile({ location: cp.default_city ?? "" });
-        }
+        if (cp) setProfile({ location: cp.default_city ?? "" });
       } else if (role === "business") {
         const { data: bp } = await supabase
           .from("business_profiles")
@@ -92,15 +89,19 @@ export function SetupProfileClient({
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!formRef.current) return; // hard guard
     setSaving(true);
 
     const supabase = createClient();
     const { data } = await supabase.auth.getUser();
     const user = data.user;
-    if (!user) return;
+    if (!user) {
+      setSaving(false);
+      return;
+    }
 
-    const form = e.currentTarget;
-    const formData = new FormData(form);
+    // ✅ Build FormData from the actual <form> element
+    const formData = new FormData(formRef.current);
     const body = Object.fromEntries(formData.entries());
 
     // Update role-specific tables
@@ -160,12 +161,13 @@ export function SetupProfileClient({
   }
 
   return (
-    <div className="min-h-screen px-4 py-10 max-w-2xl mx-auto">
+    <div className="min-h-screen px-4 py-10 max-2xl:mx-auto max-w-2xl mx-auto">
       <h1 className="text-2xl font-semibold mb-6">
         Set up your {role} profile
       </h1>
 
-      <form onSubmit={onSubmit} className="space-y-4">
+      {/* Attach the ref directly to the real <form> */}
+      <form ref={formRef} onSubmit={onSubmit} className="space-y-4">
         {role === "customer" && (
           <div className="space-y-1">
             <label className="text-sm font-medium">Service location</label>
@@ -260,6 +262,14 @@ export function SetupProfileClient({
               <input
                 name="service_area"
                 defaultValue={profile.service_area ?? ""}
+                className="w-full border border-gray-300 rounded px-3 py-2"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Website / Portfolio</label>
+              <input
+                name="portfolio"
                 className="w-full border border-gray-300 rounded px-3 py-2"
               />
             </div>
