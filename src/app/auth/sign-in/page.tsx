@@ -37,7 +37,7 @@ export default function SignInPage() {
                 // Fallback to OAuth redirect if no token (FedCM blocked or aborted)
                 await supabase.auth.signInWithOAuth({
                   provider: 'google',
-                  options: { redirectTo: `${window.location.origin}/auth/callback` },
+                  options: { redirectTo: `${window.location.origin}/auth/callback?next=/select-role` },
                 })
                 return
               }
@@ -48,12 +48,26 @@ export default function SignInPage() {
               })
               setLoading(false)
               if (error) throw error
-              window.location.assign('/')
+              // After sign-in, route based on whether the user already completed a role
+              const { data: auth } = await supabase.auth.getUser()
+              const user = auth.user
+              if (user) {
+                const { data: roles } = await supabase
+                  .from('user_roles')
+                  .select('role, stage')
+                  .eq('user_id', user.id)
+                const done = (roles || []).find(r => r.stage === 'profile_done')
+                if (done) {
+                  window.location.assign(`/portal?role=${done.role}`)
+                  return
+                }
+              }
+              window.location.assign('/select-role')
             } catch (e: any) {
               // Final fallback to OAuth redirect flow
               await supabase.auth.signInWithOAuth({
                 provider: 'google',
-                options: { redirectTo: `${window.location.origin}/auth/callback` },
+                options: { redirectTo: `${window.location.origin}/auth/callback?next=/select-role` },
               })
             }
           },
@@ -89,7 +103,7 @@ export default function SignInPage() {
       setError(error.message);
       return;
     }
-    window.location.assign("/");
+    window.location.assign("/portal");
   }
 
   // OTP helpers removed

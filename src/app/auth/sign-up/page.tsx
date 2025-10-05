@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 export default function SignUpPage() {
   const [email, setEmail] = useState("");
@@ -10,6 +11,18 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   // OTP removed for signup
   const [verifyEmailPending, setVerifyEmailPending] = useState(false);
+  const [verifyEmailFor, setVerifyEmailFor] = useState<string | null>(null);
+  const params = useSearchParams();
+  const next = params?.get('next') || '/onboarding';
+  // Derive role from next param if present
+  const roleFromNext = (() => {
+    try {
+      const url = new URL(next, window.location.origin);
+      return (url.searchParams.get('role') as 'customer'|'worker'|'business' | null) || null;
+    } catch {
+      return null;
+    }
+  })();
 
   const buttonDiv = useRef<HTMLDivElement>(null)
   const [showFallback, setShowFallback] = useState(false)
@@ -36,7 +49,7 @@ export default function SignUpPage() {
               if (!credential) {
                 await supabase.auth.signInWithOAuth({
                   provider: 'google',
-                  options: { redirectTo: `${window.location.origin}/auth/callback` },
+                  options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
                 })
                 return
               }
@@ -47,11 +60,26 @@ export default function SignUpPage() {
               })
               setLoading(false)
               if (error) throw error
-              window.location.assign('/')
+              // Existing user: if the chosen role is already enabled, skip onboarding
+              const { data: auth } = await supabase.auth.getUser()
+              const user = auth.user
+              if (user && roleFromNext) {
+                const { data: urExact } = await supabase
+                  .from('user_roles')
+                  .select('role, stage')
+                  .eq('user_id', user.id)
+                  .eq('role', roleFromNext)
+                  .maybeSingle()
+                if (urExact) {
+                  window.location.assign(`/portal?role=${roleFromNext}`)
+                  return
+                }
+              }
+              window.location.assign(next)
             } catch (e: any) {
               await supabase.auth.signInWithOAuth({
                 provider: 'google',
-                options: { redirectTo: `${window.location.origin}/auth/callback` },
+                options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
               })
             }
           },
@@ -84,7 +112,7 @@ export default function SignUpPage() {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
     });
     setLoading(false);
     if (error) {
@@ -94,9 +122,12 @@ export default function SignUpPage() {
     // If email confirmation is required, Supabase returns null session.
     if (!data.session) {
       setVerifyEmailPending(true);
+      setVerifyEmailFor(email);
+      setEmail("");
+      setPassword("");
       return;
     }
-    window.location.assign("/");
+    window.location.assign(next);
   }
 
   // OTP helpers removed
@@ -120,8 +151,8 @@ export default function SignUpPage() {
                 const supabase = createClient();
                 const { error } = await supabase.auth.resend({
                   type: 'signup',
-                  email,
-                  options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+                  email: verifyEmailFor || email,
+                  options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding` },
                 });
                 setLoading(false);
                 if (error) setError(error.message);

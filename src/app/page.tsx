@@ -1,6 +1,22 @@
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
+import { createClient } from '@/lib/supabase/server';
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  const user = auth.user;
+  let dashboardHref = '/portal';
+  if (user) {
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role, stage')
+      .eq('user_id', user.id)
+      .in('stage', ['profile_done'])
+      .limit(1);
+    if (roles && roles.length > 0 && roles[0].role) {
+      dashboardHref = `/portal?role=${roles[0].role}`;
+    }
+  }
   return (
     <div className="min-h-screen bg-white">
       {/* Top Navigation Bar */}
@@ -19,20 +35,39 @@ export default function Home() {
             
             {/* Navigation Links */}
             <nav className="hidden md:flex items-center space-x-8">
-              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">Find Work</a>
-              <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">Find Workers</a>
+              <a href={`/auth/sign-up?next=${encodeURIComponent('/onboarding?role=worker')}`} className="text-gray-700 hover:text-blue-600 font-medium">Find Work</a>
+              <a href={`/auth/sign-up?next=${encodeURIComponent('/onboarding?role=customer')}`} className="text-gray-700 hover:text-blue-600 font-medium">Find Workers</a>
               <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">How It Works</a>
               <a href="#" className="text-gray-700 hover:text-blue-600 font-medium">Pricing</a>
             </nav>
             
             {/* Right Side Buttons */}
-            <div className="flex items-center space-x-4">
-              <a href="/auth/sign-in" className="border border-gray-300 text-gray-700 rounded h-9 px-3 flex items-center whitespace-nowrap">
-                Sign In
-              </a>
-              <a href="/auth/sign-up" className="bg-blue-600 hover:bg-blue-700 text-white rounded h-9 px-3 flex items-center whitespace-nowrap">
-                Get Started
-              </a>
+            <div className="flex items-center space-x-4 relative">
+              {user ? (
+                <>
+                  <a href={dashboardHref} className="bg-blue-600 hover:bg-blue-700 text-white rounded h-9 px-3 flex items-center whitespace-nowrap">Go to Dashboard</a>
+                  <details className="relative">
+                    <summary className="list-none cursor-pointer">
+                      <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
+                        {(user.email || 'U').slice(0,1).toUpperCase()}
+                      </div>
+                    </summary>
+                    <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded shadow">
+                      <div className="px-3 py-2 text-sm text-gray-600">Signed in as <span className="font-medium">{user.email}</span></div>
+                      <div className="border-t border-gray-100" />
+                      <a href="/portal" className="block px-3 py-2 text-sm hover:bg-gray-50">Account settings</a>
+                      <form action="/auth/sign-out" method="post">
+                        <button type="submit" className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">Sign out</button>
+                      </form>
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <>
+                  <a href="/auth/sign-in" className="border border-gray-300 text-gray-700 rounded h-9 px-3 flex items-center whitespace-nowrap">Sign In</a>
+                  <a href="/select-role" className="bg-blue-600 hover:bg-blue-700 text-white rounded h-9 px-3 flex items-center whitespace-nowrap">Get Started</a>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -60,15 +95,9 @@ export default function Home() {
                 <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 whitespace-nowrap w-full sm:w-auto font-semibold shadow-lg">
                   Join Waitlist Now
                 </Button>
-                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 whitespace-nowrap w-full sm:w-auto">
-                  I Need Something Fixed
-                </Button>
-                <Button variant="outline" size="lg" className="border-gray-300 text-gray-700 px-8 py-3 whitespace-nowrap w-full sm:w-auto">
-                  I&apos;m Looking for Work
-                </Button>
-                <Button variant="outline" size="lg" className="border-gray-300 text-gray-700 px-8 py-3 whitespace-nowrap w-full sm:w-auto">
-                  I Need Workers
-                </Button>
+                <a href={`/auth/sign-up?next=${encodeURIComponent('/onboarding?role=customer')}`} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 whitespace-nowrap w-full sm:w-auto rounded text-center">I Need Something Fixed</a>
+                <a href={`/auth/sign-up?next=${encodeURIComponent('/onboarding?role=worker')}`} className="border border-gray-300 text-gray-700 px-8 py-3 whitespace-nowrap w-full sm:w-auto rounded text-center">I&apos;m Looking for Work</a>
+                <a href={`/auth/sign-up?next=${encodeURIComponent('/onboarding?role=business')}`} className="border border-gray-300 text-gray-700 px-8 py-3 whitespace-nowrap w-full sm:w-auto rounded text-center">I Need Workers</a>
               </div>
               
               {/* Feature Icons */}
@@ -321,15 +350,9 @@ export default function Home() {
             <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 whitespace-nowrap w-full sm:w-auto font-semibold shadow-lg">
               Join Waitlist Now
             </Button>
-            <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 whitespace-nowrap w-full sm:w-auto">
-              I Need Something Fixed
-            </Button>
-            <Button variant="outline" size="lg" className="border-gray-300 text-gray-700 px-8 py-3 whitespace-nowrap w-full sm:w-auto">
-              Sign Up as Worker
-            </Button>
-            <Button variant="outline" size="lg" className="border-gray-300 text-gray-700 px-8 py-3 whitespace-nowrap w-full sm:w-auto">
-              I Need Workers
-            </Button>
+            <a href={`/auth/sign-up?next=${encodeURIComponent('/onboarding?role=customer')}`} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 whitespace-nowrap w-full sm:w-auto rounded text-center">I Need Something Fixed</a>
+            <a href={`/auth/sign-up?next=${encodeURIComponent('/onboarding?role=worker')}`} className="border border-gray-300 text-gray-700 px-8 py-3 whitespace-nowrap w-full sm:w-auto rounded text-center">Sign Up as Worker</a>
+            <a href={`/auth/sign-up?next=${encodeURIComponent('/onboarding?role=business')}`} className="border border-gray-300 text-gray-700 px-8 py-3 whitespace-nowrap w-full sm:w-auto rounded text-center">I Need Workers</a>
           </div>
         </div>
       </section>
