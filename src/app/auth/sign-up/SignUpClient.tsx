@@ -1,9 +1,11 @@
+// app/auth/sign-up/SignUpClient.tsx
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import Link from "next/link";
 
-/* --- Minimal types to avoid `any` / ts-ignore --- */
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+
+/* Minimal types */
 type Role = "worker" | "customer" | "business";
 type GoogleCredentialResponse = { credential?: string };
 type GoogleIdApi = {
@@ -18,18 +20,30 @@ type GoogleIdApi = {
 };
 type GoogleGlobal = { accounts?: { id?: GoogleIdApi } };
 type GoogleWindow = { google?: GoogleGlobal };
-type UserRoleRow = { role: Role; stage: "enabled" | "basics_done" | "profile_done" };
 
-export default function SignInPage() {
+export function SignUpClient({
+  nextPath,
+  roleFromNext,
+}: {
+  nextPath: string;
+  roleFromNext: Role | null;
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const buttonDiv = useRef<HTMLDivElement>(null);
+  const [verifyEmailPending, setVerifyEmailPending] = useState(false);
+  const [verifyEmailFor, setVerifyEmailFor] = useState<string | null>(null);
 
-  // Initialize Google button
+  const buttonDiv = useRef<HTMLDivElement>(null);
+  const didInit = useRef(false);
+
+  // Init Google button
   useEffect(() => {
+    if (didInit.current) return;
+    didInit.current = true;
+
     const client_id = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     if (!client_id) return;
 
@@ -37,8 +51,7 @@ export default function SignInPage() {
     const maxAttempts = 30;
 
     const tryInit = () => {
-      const idApi =
-        (window as unknown as GoogleWindow).google?.accounts?.id;
+      const idApi = (window as unknown as GoogleWindow).google?.accounts?.id;
 
       if (idApi) {
         idApi.initialize({
@@ -48,11 +61,12 @@ export default function SignInPage() {
             const { credential } = response;
             try {
               if (!credential) {
-                // Fallback to OAuth redirect if One Tap provides no token
                 await supabase.auth.signInWithOAuth({
                   provider: "google",
                   options: {
-                    redirectTo: `${window.location.origin}/auth/callback?next=/select-role`,
+                    redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
+                      nextPath
+                    )}`,
                   },
                 });
                 return;
@@ -66,31 +80,31 @@ export default function SignInPage() {
               setLoading(false);
               if (error) throw error;
 
-              // After sign-in, send to completed role if any
+              // If role already enabled, skip onboarding
               const { data: auth } = await supabase.auth.getUser();
               const user = auth.user;
-              if (user) {
-                const { data: roles } = await supabase
+              if (user && roleFromNext) {
+                const { data: urExact } = await supabase
                   .from("user_roles")
                   .select("role, stage")
-                  .eq("user_id", user.id);
+                  .eq("user_id", user.id)
+                  .eq("role", roleFromNext)
+                  .maybeSingle();
 
-                const done = (roles ?? []).find(
-                  (r: { stage: string }) => r.stage === "profile_done"
-                ) as UserRoleRow | undefined;
-
-                if (done) {
-                  window.location.assign(`/portal?role=${done.role}`);
+                if (urExact) {
+                  window.location.assign(`/portal?role=${roleFromNext}`);
                   return;
                 }
               }
-              window.location.assign("/select-role");
-            } catch{
-              // Final fallback to OAuth redirect flow
+              window.location.assign(nextPath);
+            } catch {
+              // Fallback to redirect flow
               await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: {
-                  redirectTo: `${window.location.origin}/auth/callback?next=/select-role`,
+                  redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
+                    nextPath
+                  )}`,
                 },
               });
             }
@@ -111,29 +125,72 @@ export default function SignInPage() {
     };
 
     tryInit();
-  }, []);
+  }, [nextPath, roleFromNext]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
+          nextPath
+        )}`,
+      },
     });
     setLoading(false);
     if (error) {
       setError(error.message);
       return;
     }
-    window.location.assign("/portal");
+    if (!data.session) {
+      setVerifyEmailPending(true);
+      setVerifyEmailFor(email);
+      setEmail("");
+      setPassword("");
+      return;
+    }
+    window.location.assign(nextPath);
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold mb-6">Sign in</h1>
+        <h1 className="text-2xl font-semibold mb-6">Create your account</h1>
+
+        {verifyEmailPending && (
+          <div className="mb-6 rounded border border-gray-200 p-4 bg-gray-50">
+            <p className="text-sm text-gray-700 mb-3">
+              We sent a verification link to{" "}
+              <span className="font-medium">{verifyEmailFor ?? email}</span>. Open it to verify your email and finish creating your account.
+            </p>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={async () => {
+                setLoading(true);
+                setError(null);
+                const supabase = createClient();
+                const { error } = await supabase.auth.resend({
+                  type: "signup",
+                  email: verifyEmailFor || email,
+                  options: {
+                    emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+                  },
+                });
+                setLoading(false);
+                if (error) setError(error.message);
+              }}
+              className="w-full border border-gray-300 rounded px-3 py-2"
+            >
+              {loading ? "Resending…" : "Resend verification email"}
+            </button>
+            {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+          </div>
+        )}
 
         <div ref={buttonDiv} className="mb-4 flex justify-center" />
         <div className="flex items-center gap-3 mb-4">
@@ -149,9 +206,7 @@ export default function SignInPage() {
               type="email"
               className="w-full border border-gray-300 rounded px-3 py-2"
               value={email}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setEmail(e.target.value)
-              }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
               required
               autoComplete="email"
             />
@@ -162,11 +217,10 @@ export default function SignInPage() {
               type="password"
               className="w-full border border-gray-300 rounded px-3 py-2"
               value={password}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setPassword(e.target.value)
-              }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               required
-              autoComplete="current-password"
+              minLength={6}
+              autoComplete="new-password"
             />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
@@ -175,20 +229,14 @@ export default function SignInPage() {
             disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-2"
           >
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? "Creating account..." : "Sign up"}
           </button>
         </form>
 
         <p className="text-sm text-gray-600 mt-4">
-          No account?{" "}
-          <Link href="/auth/sign-up" className="text-blue-600">
-            Sign up
-          </Link>
-        </p>
-        <p className="text-sm text-gray-600 mt-2">
-          Forgot your password?{" "}
-          <Link href="/auth/reset-request" className="text-blue-600">
-            Reset it
+          Already have an account?{" "}
+          <Link href="/auth/sign-in" className="text-blue-600">
+            Sign in
           </Link>
         </p>
       </div>
