@@ -1,5 +1,6 @@
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { createClient } from '@/lib/supabase/server';
+import { WaitlistButton } from '@/components/WaitlistButton';
 
 export default async function Home() {
   const supabase = await createClient();
@@ -92,9 +93,6 @@ export default async function Home() {
               
               {/* CTA Buttons */}
               <div className="flex flex-col gap-4 mb-8">
-                <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 whitespace-nowrap w-full sm:w-auto font-semibold shadow-lg">
-                  Join Waitlist Now
-                </Button>
                 <a href={`/auth/sign-up?next=${encodeURIComponent('/onboarding?role=customer')}`} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 whitespace-nowrap w-full sm:w-auto rounded text-center">I Need Something Fixed</a>
                 <a href={`/auth/sign-up?next=${encodeURIComponent('/onboarding?role=worker')}`} className="border border-gray-300 text-gray-700 px-8 py-3 whitespace-nowrap w-full sm:w-auto rounded text-center">I&apos;m Looking for Work</a>
                 <a href={`/auth/sign-up?next=${encodeURIComponent('/onboarding?role=business')}`} className="border border-gray-300 text-gray-700 px-8 py-3 whitespace-nowrap w-full sm:w-auto rounded text-center">I Need Workers</a>
@@ -347,9 +345,6 @@ export default async function Home() {
           </p>
           
           <div className="flex flex-col gap-4 justify-center max-w-4xl mx-auto">
-            <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 whitespace-nowrap w-full sm:w-auto font-semibold shadow-lg">
-              Join Waitlist Now
-            </Button>
             <a href={`/auth/sign-up?next=${encodeURIComponent('/onboarding?role=customer')}`} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 whitespace-nowrap w-full sm:w-auto rounded text-center">I Need Something Fixed</a>
             <a href={`/auth/sign-up?next=${encodeURIComponent('/onboarding?role=worker')}`} className="border border-gray-300 text-gray-700 px-8 py-3 whitespace-nowrap w-full sm:w-auto rounded text-center">Sign Up as Worker</a>
             <a href={`/auth/sign-up?next=${encodeURIComponent('/onboarding?role=business')}`} className="border border-gray-300 text-gray-700 px-8 py-3 whitespace-nowrap w-full sm:w-auto rounded text-center">I Need Workers</a>
@@ -365,6 +360,9 @@ export default async function Home() {
           </p>
         </div>
       </footer>
+
+      {/* Floating Waitlist Button */}
+      <WaitlistButton />
     </div>
   );
 }
