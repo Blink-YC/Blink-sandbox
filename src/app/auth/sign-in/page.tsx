@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 /* --- Minimal types to avoid `any` / ts-ignore --- */
 type Role = "worker" | "customer" | "business";
@@ -20,7 +21,10 @@ type GoogleGlobal = { accounts?: { id?: GoogleIdApi } };
 type GoogleWindow = { google?: GoogleGlobal };
 type UserRoleRow = { role: Role; stage: "enabled" | "basics_done" | "profile_done" };
 
-export default function SignInPage() {
+function SignInContent() {
+  const searchParams = useSearchParams();
+  const nextPath = searchParams.get("next") || "/portal";
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +56,7 @@ export default function SignInPage() {
                 await supabase.auth.signInWithOAuth({
                   provider: "google",
                   options: {
-                    redirectTo: `${window.location.origin}/auth/callback?next=/select-role`,
+                    redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
                   },
                 });
                 return;
@@ -66,9 +70,16 @@ export default function SignInPage() {
               setLoading(false);
               if (error) throw error;
 
-              // After sign-in, send to completed role if any
+              // After sign-in, check if we should go to the next path
+              // or to a completed role
               const { data: auth } = await supabase.auth.getUser();
               const user = auth.user;
+              if (user && nextPath !== "/portal") {
+                // If there's a specific next path, go there
+                window.location.assign(nextPath);
+                return;
+              }
+              
               if (user) {
                 const { data: roles } = await supabase
                   .from("user_roles")
@@ -84,13 +95,13 @@ export default function SignInPage() {
                   return;
                 }
               }
-              window.location.assign("/select-role");
+              window.location.assign(nextPath);
             } catch{
               // Final fallback to OAuth redirect flow
               await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: {
-                  redirectTo: `${window.location.origin}/auth/callback?next=/select-role`,
+                  redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
                 },
               });
             }
@@ -111,7 +122,7 @@ export default function SignInPage() {
     };
 
     tryInit();
-  }, []);
+  }, [nextPath]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -127,7 +138,7 @@ export default function SignInPage() {
       setError(error.message);
       return;
     }
-    window.location.assign("/portal");
+    window.location.assign(nextPath);
   }
 
   return (
@@ -193,5 +204,19 @@ export default function SignInPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="w-full max-w-sm">
+          <div className="text-sm text-gray-600">Loading...</div>
+        </div>
+      </div>
+    }>
+      <SignInContent />
+    </Suspense>
   );
 }

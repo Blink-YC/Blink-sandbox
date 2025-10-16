@@ -6,6 +6,7 @@ import type { ChangeEvent, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { createClient } from "@/lib/supabase/client";
+import { StepProgress } from "@/components/StepProgress";
 
 /* ---- Minimal types ---- */
 type Role = "customer" | "worker" | "business";
@@ -41,6 +42,7 @@ export default function OnboardingClient({ initialRole }: { initialRole: Role })
   const [email,     setEmail]     = useState("");
   const [location,  setLocation]  = useState("");
   const [emailPrefilled, setEmailPrefilled] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const locationInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -94,6 +96,7 @@ export default function OnboardingClient({ initialRole }: { initialRole: Role })
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setSubmitting(true);
     const supabase = createClient();
     const { data } = await supabase.auth.getUser();
     const user = data.user;
@@ -114,13 +117,19 @@ export default function OnboardingClient({ initialRole }: { initialRole: Role })
     router.replace(`/setup-profile?role=${role}`);
   }
 
+  async function handleBack() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/');
+  }
+
   const onChangeFirst = (e: ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value);
   const onChangeLast  = (e: ChangeEvent<HTMLInputElement>) => setLastName(e.target.value);
   const onChangeEmail = (e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value);
   const onChangeLoc   = (e: ChangeEvent<HTMLInputElement>) => setLocation(e.target.value);
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="min-h-screen px-4 py-10">
       {/* Google Places script for location autocomplete */}
       <Script
         src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
@@ -138,8 +147,21 @@ export default function OnboardingClient({ initialRole }: { initialRole: Role })
         }}
       />
 
-      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4">
-        <h1 className="text-2xl font-semibold">Basic information</h1>
+      <StepProgress
+        steps={[
+          { number: 1, label: "Basic Info", completed: false, current: true },
+          { number: 2, label: "Profile Setup", completed: false, current: false },
+          { number: 3, label: "Complete", completed: false, current: false },
+        ]}
+      />
+
+      <form onSubmit={onSubmit} className="w-full max-w-sm mx-auto space-y-4">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-semibold">Basic information</h1>
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+            Onboarding as {role === "worker" ? "🔧 Worker" : role === "customer" ? "👤 Customer" : "🏢 Business"}
+          </span>
+        </div>
 
         <div className="space-y-1">
           <label className="text-sm font-medium">First name</label>
@@ -187,9 +209,23 @@ export default function OnboardingClient({ initialRole }: { initialRole: Role })
           />
         </div>
 
-        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-2">
-          Continue
-        </button>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={handleBack}
+            disabled={submitting}
+            className="flex-1 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded px-3 py-2 font-medium disabled:opacity-50"
+          >
+            ← Previous
+          </button>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-2 font-medium disabled:opacity-50"
+          >
+            {submitting ? "Saving..." : "Next →"}
+          </button>
+        </div>
       </form>
     </div>
   );

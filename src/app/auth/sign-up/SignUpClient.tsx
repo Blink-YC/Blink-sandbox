@@ -21,6 +21,17 @@ type GoogleIdApi = {
 type GoogleGlobal = { accounts?: { id?: GoogleIdApi } };
 type GoogleWindow = { google?: GoogleGlobal };
 
+function formatPasswordError(errorMessage: string): string {
+  // Check if it's a password strength error
+  if (errorMessage.toLowerCase().includes("password") && 
+      (errorMessage.includes("abcdefghijklmnopqrstuvwxyz") || 
+       errorMessage.includes("at least") || 
+       errorMessage.includes("character"))) {
+    return "Password must be at least 8 characters and include: uppercase letter, lowercase letter, number, and special character (!@#$%^&* etc.)";
+  }
+  return errorMessage;
+}
+
 export function SignUpClient({
   nextPath,
   roleFromNext,
@@ -31,7 +42,10 @@ export function SignUpClient({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [emailExists, setEmailExists] = useState(false);
 
   const [verifyEmailPending, setVerifyEmailPending] = useState(false);
   const [verifyEmailFor, setVerifyEmailFor] = useState<string | null>(null);
@@ -129,9 +143,49 @@ export function SignUpClient({
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+    setEmailError(null);
+    setPasswordError(null);
+    setEmailExists(false);
+    
+    // Client-side validation
+    if (!email || email.trim() === "") {
+      setEmailError("Email is required");
+      return;
+    }
+    
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setEmailError("Please enter a valid email address");
+      return;
+    }
+    
+    if (!password || password.trim() === "") {
+      setPasswordError("Password is required");
+      return;
+    }
+    
+    if (password.length < 8) {
+      setPasswordError("Password must be at least 8 characters long");
+      return;
+    }
+    
+    // Check password strength
+    const hasUpper = /[A-Z]/.test(password);
+    const hasLower = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password);
+    
+    if (!hasUpper || !hasLower || !hasNumber || !hasSpecial) {
+      setPasswordError("Password must include: uppercase letter, lowercase letter, number, and special character (!@#$%^&* etc.)");
+      return;
+    }
+    
+    setLoading(true);
     const supabase = createClient();
+    
+    // Try to sign up
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -142,10 +196,47 @@ export function SignUpClient({
       },
     });
     setLoading(false);
+    
     if (error) {
-      setError(error.message);
+      const errorLower = error.message.toLowerCase();
+      
+      // Check if error indicates user already exists
+      if (errorLower.includes("already") || 
+          errorLower.includes("exists") ||
+          errorLower.includes("registered")) {
+        setEmailExists(true);
+        setError(null);
+        setEmailError(null);
+        setPasswordError(null);
+      } else if (errorLower.includes("email")) {
+        // Any email-related error - show directly under email field
+        setEmailError(error.message);
+        setError(null);
+        setPasswordError(null);
+      } else if (errorLower.includes("password")) {
+        // Any password-related error - show directly under password field
+        setPasswordError(formatPasswordError(error.message));
+        setError(null);
+        setEmailError(null);
+      } else {
+        // Other errors - for debugging
+        console.log("Signup error:", error.message);
+        setError(error.message);
+        setEmailError(null);
+        setPasswordError(null);
+      }
       return;
     }
+    
+    // Check if user already exists with a confirmed email
+    // Supabase returns a user with empty identities array when email is already registered
+    if (data.user && !data.session && data.user.identities && data.user.identities.length === 0) {
+      setEmailExists(true);
+      setError(null);
+      return;
+    }
+    
+    // If no session, user needs to verify email
     if (!data.session) {
       setVerifyEmailPending(true);
       setVerifyEmailFor(email);
@@ -153,6 +244,8 @@ export function SignUpClient({
       setPassword("");
       return;
     }
+    
+    // If we have a session, sign up was successful - redirect
     window.location.assign(nextPath);
   }
 
@@ -160,6 +253,42 @@ export function SignUpClient({
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <h1 className="text-2xl font-semibold mb-6">Create your account</h1>
+
+        {emailExists && (
+          <div className="mb-6 rounded border border-yellow-300 bg-yellow-50 p-4">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 text-yellow-600 text-xl">⚠️</div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-yellow-800 mb-1">
+                  Account Already Exists
+                </h3>
+                <p className="text-sm text-yellow-700 mb-3">
+                  An account with <span className="font-medium">{email}</span> already exists. 
+                  Please sign in instead or use a different email address.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Link
+                    href={`/auth/sign-in?next=${encodeURIComponent(nextPath)}`}
+                    className="inline-block bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium px-4 py-2 rounded text-center"
+                  >
+                    Go to Sign In
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmailExists(false);
+                      setEmail("");
+                      setPassword("");
+                    }}
+                    className="inline-block border border-yellow-600 text-yellow-700 hover:bg-yellow-100 text-sm font-medium px-4 py-2 rounded text-center"
+                  >
+                    Try Different Email
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {verifyEmailPending && (
           <div className="mb-6 rounded border border-gray-200 p-4 bg-gray-50">
@@ -199,29 +328,52 @@ export function SignUpClient({
           <div className="h-px bg-gray-200 flex-1" />
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={onSubmit} noValidate className="space-y-4">
           <div className="space-y-1">
             <label className="text-sm font-medium">Email</label>
             <input
               type="email"
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className={`w-full border rounded px-3 py-2 ${
+                emailError ? "border-red-300 focus:border-red-500 focus:ring-red-500" : "border-gray-300"
+              }`}
               value={email}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-              required
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                setEmail(e.target.value);
+                if (emailError) setEmailError(null);
+              }}
               autoComplete="email"
+              placeholder="you@example.com"
             />
+            {emailError && (
+              <p className="text-xs text-red-600 mt-1">
+                {emailError}
+              </p>
+            )}
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">Password</label>
             <input
               type="password"
-              className="w-full border border-gray-300 rounded px-3 py-2"
+              className={`w-full border rounded px-3 py-2 ${
+                passwordError ? "border-red-300 focus:border-red-500 focus:ring-red-500" : "border-gray-300"
+              }`}
               value={password}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-              required
-              minLength={6}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                setPassword(e.target.value);
+                if (passwordError) setPasswordError(null);
+              }}
               autoComplete="new-password"
+              placeholder="••••••••"
             />
+            {passwordError ? (
+              <p className="text-xs text-red-600 mt-1">
+                {passwordError}
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500 mt-1">
+                Must be at least 8 characters with uppercase, lowercase, number, and special character
+              </p>
+            )}
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button

@@ -4,12 +4,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { StepProgress } from "@/components/StepProgress";
 
 type Role = "customer" | "worker" | "business";
 
 type ProfileDefaults = Partial<{
   // customer
-  location: string;
+  service_needs: string;
+  property_type: string;
+  service_frequency: string;
   // worker
   specialties: string;
   years_experience: number;
@@ -29,6 +32,10 @@ export function SetupProfileClient({ initialRole }: { initialRole: Role }) {
 
   // ✅ Use a ref to guarantee a real HTMLFormElement
   const formRef = useRef<HTMLFormElement>(null);
+
+  function handleBack() {
+    router.push(`/onboarding?role=${role}`);
+  }
 
   // Prefill based on role
   useEffect(() => {
@@ -65,11 +72,17 @@ export function SetupProfileClient({ initialRole }: { initialRole: Role }) {
       } else if (role === "customer") {
         const { data: cp } = await supabase
           .from("customer_profiles")
-          .select("default_city")
+          .select("service_needs, property_type, service_frequency")
           .eq("user_id", user.id)
           .maybeSingle();
 
-        if (cp) setProfile({ location: cp.default_city ?? "" });
+        if (cp) {
+          setProfile({
+            service_needs: cp.service_needs ?? "",
+            property_type: cp.property_type ?? "",
+            service_frequency: cp.service_frequency ?? "",
+          });
+        }
       } else if (role === "business") {
         const { data: bp } = await supabase
           .from("business_profiles")
@@ -134,7 +147,9 @@ export function SetupProfileClient({ initialRole }: { initialRole: Role }) {
     } else if (role === "customer") {
       await supabase.from("customer_profiles").upsert({
         user_id: user.id,
-        default_city: (body.location as string) || null,
+        service_needs: (body.service_needs as string) || null,
+        property_type: (body.property_type as string) || null,
+        service_frequency: (body.service_frequency as string) || null,
         preferred_contact_method: "app",
         updated_at: new Date().toISOString(),
       });
@@ -161,22 +176,70 @@ export function SetupProfileClient({ initialRole }: { initialRole: Role }) {
   }
 
   return (
-    <div className="min-h-screen px-4 py-10 max-2xl:mx-auto max-w-2xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-6">
-        Set up your {role} profile
-      </h1>
+    <div className="min-h-screen px-4 py-10">
+      <StepProgress
+        steps={[
+          { number: 1, label: "Basic Info", completed: true, current: false },
+          { number: 2, label: "Profile Setup", completed: false, current: true },
+          { number: 3, label: "Complete", completed: false, current: false },
+        ]}
+      />
 
-      {/* Attach the ref directly to the real <form> */}
-      <form ref={formRef} onSubmit={onSubmit} className="space-y-4">
+      <div className="max-w-2xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-semibold">
+            Set up your {role} profile
+          </h1>
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+            Onboarding as {role === "worker" ? "🔧 Worker" : role === "customer" ? "👤 Customer" : "🏢 Business"}
+          </span>
+        </div>
+
+        {/* Attach the ref directly to the real <form> */}
+        <form ref={formRef} onSubmit={onSubmit} className="space-y-4">
         {role === "customer" && (
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Service location</label>
-            <input
-              name="location"
-              defaultValue={profile.location ?? ""}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-            />
-          </div>
+          <>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">What type of services are you looking for?</label>
+              <textarea
+                name="service_needs"
+                rows={3}
+                defaultValue={profile.service_needs ?? ""}
+                className="w-full border border-gray-300 rounded px-3 py-2"
+                placeholder="e.g., Plumbing, Electrical, HVAC, General Repairs"
+              />
+            </div>
+            
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Property type</label>
+              <select
+                name="property_type"
+                defaultValue={profile.property_type ?? ""}
+                className="w-full border border-gray-300 rounded px-3 py-2"
+              >
+                <option value="">Select property type</option>
+                <option value="residential">Residential (Home/Apartment)</option>
+                <option value="commercial">Commercial (Office/Store)</option>
+                <option value="industrial">Industrial (Warehouse/Factory)</option>
+                <option value="mixed">Mixed Use</option>
+              </select>
+            </div>
+            
+            <div className="space-y-1">
+              <label className="text-sm font-medium">How often do you need services?</label>
+              <select
+                name="service_frequency"
+                defaultValue={profile.service_frequency ?? ""}
+                className="w-full border border-gray-300 rounded px-3 py-2"
+              >
+                <option value="">Select frequency</option>
+                <option value="one-time">One-time project</option>
+                <option value="occasional">Occasional (Few times a year)</option>
+                <option value="regular">Regular (Monthly)</option>
+                <option value="ongoing">Ongoing partnership</option>
+              </select>
+            </div>
+          </>
         )}
 
         {role === "worker" && (
@@ -278,14 +341,23 @@ export function SetupProfileClient({ initialRole }: { initialRole: Role }) {
 
         <div className="flex gap-3">
           <button
+            type="button"
+            onClick={handleBack}
+            disabled={saving}
+            className="flex-1 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded px-3 py-2 font-medium disabled:opacity-50"
+          >
+            ← Previous
+          </button>
+          <button
             type="submit"
             disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-2"
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-2 font-medium disabled:opacity-50"
           >
-            {saving ? "Saving…" : "Finish setup"}
+            {saving ? "Saving…" : "Finish →"}
           </button>
         </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }
