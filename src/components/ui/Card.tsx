@@ -1,53 +1,28 @@
-import React from 'react';
+import { ReactNode } from 'react';
+
+export type CardVariant = 'default' | 'primary' | 'accent' | 'ghost';
 
 interface CardProps {
-  children: React.ReactNode;
+  children: ReactNode;
+  variant?: CardVariant;
+  hover?: boolean;
   className?: string;
 }
 
-export function Card({ children, className = '' }: CardProps) {
-  return (
-    <div className={`rounded-lg border border-gray-200 bg-white text-gray-900 shadow-sm ${className}`}>
-      {children}
-    </div>
-  );
-}
+const variantStyles: Record<CardVariant, string> = {
+  default: 'bg-white border-2 border-gray-200',
+  primary: 'bg-gradient-to-br from-blue-600/5 to-blue-600/10 border-2 border-blue-600/20 hover:border-blue-600/40',
+  accent: 'bg-gradient-to-br from-orange-500/5 to-orange-500/10 border-2 border-orange-500/20 hover:border-orange-500/40',
+  ghost: 'bg-white border border-gray-100',
+};
 
-export function CardHeader({ children, className = '' }: CardProps) {
-  return (
-    <div className={`flex flex-col space-y-1.5 p-6 ${className}`}>
-      {children}
-    </div>
-  );
-}
+export function Card({ children, variant = 'default', hover = false, className = '' }: CardProps) {
+  const hoverStyles = hover ? 'hover:-translate-y-1 hover:shadow-lg' : '';
 
-export function CardTitle({ children, className = '' }: CardProps) {
   return (
-    <h3 className={`text-2xl font-semibold leading-none tracking-tight ${className}`}>
-      {children}
-    </h3>
-  );
-}
-
-export function CardDescription({ children, className = '' }: CardProps) {
-  return (
-    <p className={`text-sm text-gray-600 ${className}`}>
-      {children}
-    </p>
-  );
-}
-
-export function CardContent({ children, className = '' }: CardProps) {
-  return (
-    <div className={`p-6 pt-0 ${className}`}>
-      {children}
-    </div>
-  );
-}
-
-export function CardFooter({ children, className = '' }: CardProps) {
-  return (
-    <div className={`flex items-center p-6 pt-0 ${className}`}>
+    <div
+      className={`rounded-2xl p-8 transition-all ${variantStyles[variant]} ${hoverStyles} ${className}`}
+    >
       {children}
     </div>
   );
