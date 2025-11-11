@@ -1,45 +1,56 @@
-import React from 'react';
+import { ReactNode } from 'react';
+
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps {
-  children: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'outline';
-  size?: 'sm' | 'md' | 'lg';
-  onClick?: () => void;
-  disabled?: boolean;
+  children: ReactNode;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   className?: string;
+  href?: string;
+  onClick?: () => void;
+  icon?: ReactNode;
 }
 
-export function Button({ 
-  children, 
-  variant = 'primary', 
-  size = 'md', 
-  onClick, 
-  disabled = false,
-  className = ''
+const variantStyles: Record<ButtonVariant, string> = {
+  primary: 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow',
+  secondary: 'bg-orange-500 hover:bg-orange-600 text-white shadow-sm hover:shadow',
+  outline: 'border-2 border-gray-300 hover:bg-gray-50 text-gray-700',
+  ghost: 'text-blue-600 hover:bg-blue-50',
+};
+
+const sizeStyles: Record<ButtonSize, string> = {
+  sm: 'px-4 py-2 text-sm',
+  md: 'px-6 py-2.5 text-base',
+  lg: 'px-8 py-3.5 text-lg',
+};
+
+export function Button({
+  children,
+  variant = 'primary',
+  size = 'md',
+  className = '',
+  href,
+  onClick,
+  icon,
 }: ButtonProps) {
-  const baseClasses = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
-  
-  const variants = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700',
-    secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
-    outline: 'border border-gray-300 bg-white hover:bg-gray-50'
-  };
-  
-  const sizes = {
-    sm: 'h-9 px-3 text-sm',
-    md: 'h-10 px-4 py-2',
-    lg: 'h-11 px-8'
-  };
-  
-  const classes = `${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`;
-  
+  const baseStyles = 'inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-all';
+  const combinedStyles = `${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className}`;
+
+  if (href) {
+    return (
+      <a href={href} className={combinedStyles}>
+        {children}
+        {icon && icon}
+      </a>
+    );
+  }
+
   return (
-    <button 
-      className={classes}
-      onClick={onClick}
-      disabled={disabled}
-    >
+    <button onClick={onClick} className={combinedStyles}>
       {children}
+      {icon && icon}
     </button>
   );
 }
