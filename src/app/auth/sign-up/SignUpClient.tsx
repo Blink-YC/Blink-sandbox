@@ -110,7 +110,8 @@ export function SignUpClient({
                   return;
                 }
               }
-              window.location.assign(nextPath);
+              // After successful Google sign-up, redirect to role selector
+              window.location.assign("/auth/role-select");
             } catch {
               // Fallback to redirect flow
               await supabase.auth.signInWithOAuth({
@@ -245,14 +246,53 @@ export function SignUpClient({
       return;
     }
     
-    // If we have a session, sign up was successful - redirect
-    window.location.assign(nextPath);
+    // If we have a session, sign up was successful - redirect to role selector
+    window.location.assign("/auth/role-select");
   }
 
+  // Map role to display role for UI
+  const displayRole = roleFromNext === 'business' ? 'employer' : roleFromNext === 'worker' ? 'worker' : null;
+
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold mb-6">Create your account</h1>
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
+      <div className="w-full max-w-md">
+        {/* Back Button */}
+        <Link 
+          href="/auth/role-select"
+          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 mb-6"
+        >
+          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to role selection
+        </Link>
+
+        {/* Card Container */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+          {/* Role Badge */}
+          {displayRole && (
+            <div className="flex justify-center mb-6">
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
+                displayRole === 'employer' 
+                  ? 'bg-blue-100 text-blue-700' 
+                  : 'bg-orange-100 text-orange-600'
+              }`}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {displayRole === 'employer' ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  )}
+                </svg>
+                <span className="font-medium text-sm">
+                  Signing up as {displayRole === 'employer' ? 'Employer' : 'Worker'}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <h1 className="text-3xl font-bold text-center mb-2">Create Your Account</h1>
+          <p className="text-gray-600 text-center mb-8">Join Blink and get started today</p>
 
         {emailExists && (
           <div className="mb-6 rounded border border-yellow-300 bg-yellow-50 p-4">
@@ -328,13 +368,13 @@ export function SignUpClient({
           <div className="h-px bg-gray-200 flex-1" />
         </div>
 
-        <form onSubmit={onSubmit} noValidate className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Email</label>
+        <form onSubmit={onSubmit} noValidate className="space-y-5">
+          <div>
+            <label className="text-sm font-semibold text-gray-900 mb-2 block">Email</label>
             <input
               type="email"
-              className={`w-full border rounded px-3 py-2 ${
-                emailError ? "border-red-300 focus:border-red-500 focus:ring-red-500" : "border-gray-300"
+              className={`w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:border-transparent bg-gray-50 text-gray-900 ${
+                emailError ? "border-red-300 focus:ring-red-600" : "border-gray-200 focus:ring-blue-600"
               }`}
               value={email}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -345,17 +385,17 @@ export function SignUpClient({
               placeholder="you@example.com"
             />
             {emailError && (
-              <p className="text-xs text-red-600 mt-1">
+              <p className="text-xs text-red-600 mt-1.5">
                 {emailError}
               </p>
             )}
           </div>
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Password</label>
+          <div>
+            <label className="text-sm font-semibold text-gray-900 mb-2 block">Password</label>
             <input
               type="password"
-              className={`w-full border rounded px-3 py-2 ${
-                passwordError ? "border-red-300 focus:border-red-500 focus:ring-red-500" : "border-gray-300"
+              className={`w-full border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:border-transparent bg-gray-50 text-gray-900 ${
+                passwordError ? "border-red-300 focus:ring-red-600" : "border-gray-200 focus:ring-blue-600"
               }`}
               value={password}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -366,31 +406,45 @@ export function SignUpClient({
               placeholder="••••••••"
             />
             {passwordError ? (
-              <p className="text-xs text-red-600 mt-1">
+              <p className="text-xs text-red-600 mt-1.5">
                 {passwordError}
               </p>
             ) : (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 mt-1.5">
                 Must be at least 8 characters with uppercase, lowercase, number, and special character
               </p>
             )}
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded px-3 py-2"
+            className={`w-full ${
+              displayRole === 'worker' 
+                ? 'bg-orange-500 hover:bg-orange-600' 
+                : 'bg-blue-600 hover:bg-blue-700'
+            } disabled:bg-gray-400 text-white font-semibold rounded-lg px-4 py-3.5 transition-colors`}
           >
-            {loading ? "Creating account..." : "Sign up"}
+            {loading ? "Creating account..." : "Create Account"}
           </button>
         </form>
 
-        <p className="text-sm text-gray-600 mt-4">
+        <div className="mt-6 text-center space-y-2">
+          <p className="text-sm text-gray-600">
           Already have an account?{" "}
-          <Link href="/auth/sign-in" className="text-blue-600">
+            <Link 
+              href={displayRole ? `/auth/sign-in?role=${displayRole}` : "/auth/sign-in"} 
+              className="text-blue-600 hover:text-blue-700 font-medium"
+            >
             Sign in
           </Link>
         </p>
+        </div>
+        </div>
       </div>
     </div>
   );

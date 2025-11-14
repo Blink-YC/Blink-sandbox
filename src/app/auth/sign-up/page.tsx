@@ -10,13 +10,20 @@ export default async function Page({
   searchParams,
 }: {
   // Next 15: searchParams can be a Promise; await before use
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; role?: string }>;
 }) {
   const sp = await searchParams;
   const nextPath = sp?.next ?? "/onboarding";
+  const directRole = sp?.role;
 
-  // Optionally extract role from the `next` URL query (?role=worker)
+  // Optionally extract role from the `next` URL query (?role=worker) OR from direct role param
   let roleFromNext: Role | null = null;
+  
+  // First check direct role parameter
+  if (directRole === "worker" || directRole === "customer" || directRole === "business") {
+    roleFromNext = directRole;
+  } else {
+    // Try to extract from next URL
   try {
     const url = new URL(nextPath, "http://localhost"); // base only used to parse
     const r = url.searchParams.get("role");
@@ -25,6 +32,7 @@ export default async function Page({
     }
   } catch {
     // ignore bad URLs
+    }
   }
 
   return (

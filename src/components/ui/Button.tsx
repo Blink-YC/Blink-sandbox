@@ -26,13 +26,13 @@ const sizeStyles: Record<ButtonSize, string> = {
   lg: 'px-8 py-3.5 text-lg',
 };
 
-export function Button({
-  children,
-  variant = 'primary',
-  size = 'md',
+export function Button({ 
+  children, 
+  variant = 'primary', 
+  size = 'md', 
   className = '',
   href,
-  onClick,
+  onClick, 
   icon,
 }: ButtonProps) {
   const baseStyles = 'inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-all';
@@ -46,7 +46,7 @@ export function Button({
       </a>
     );
   }
-
+  
   return (
     <button onClick={onClick} className={combinedStyles}>
       {children}
