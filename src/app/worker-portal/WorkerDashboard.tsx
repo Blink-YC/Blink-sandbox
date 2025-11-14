@@ -18,7 +18,6 @@ type Job = {
 export default function WorkerDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [workerName, setWorkerName] = useState('John Smith');
   const [activeTab, setActiveTab] = useState<'available' | 'applied' | 'active'>('available');
   const [jobs, setJobs] = useState<Job[]>([]);
   const [workerProfile, setWorkerProfile] = useState({
@@ -73,7 +72,7 @@ export default function WorkerDashboard() {
       // Update worker profile state with real data
       if (profile || workerProfileData) {
         const initials = profile?.full_name 
-          ? profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase() 
+          ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase() 
           : 'JS';
         
         setWorkerProfile({
@@ -86,10 +85,6 @@ export default function WorkerDashboard() {
           badges: ['Top Rated', 'Quick Responder', 'OSHA Certified'], // TODO: Calculate from achievements
           profileCompleteness: calculateProfileCompleteness(profile, workerProfileData),
         });
-
-        if (profile?.full_name) {
-          setWorkerName(profile.full_name);
-        }
       }
 
       // For now, use mock data for jobs
@@ -100,13 +95,13 @@ export default function WorkerDashboard() {
     loadData();
   }, [router]);
 
-  function calculateProfileCompleteness(profile: any, workerProfile: any): number {
+  function calculateProfileCompleteness(profile: {full_name?: string, phone?: string, city?: string} | null, workerProfile: {trades?: string[], years_experience_range?: string, rate_cents?: number, job_type_preference?: string, travel_radius?: string, availability?: string} | null): number {
     let completeness = 0;
     const fields = [
       profile?.full_name,
       profile?.phone,
       profile?.city,
-      workerProfile?.trades?.length > 0,
+      workerProfile?.trades && workerProfile.trades.length > 0,
       workerProfile?.years_experience_range,
       workerProfile?.rate_cents,
       workerProfile?.job_type_preference,

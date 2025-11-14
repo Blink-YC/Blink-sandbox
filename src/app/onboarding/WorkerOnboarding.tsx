@@ -270,7 +270,7 @@ export function WorkerOnboarding() {
           </div>
 
           {/* Title */}
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Let's set up your profile</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Let&apos;s set up your profile</h2>
           <p className="text-gray-600 mb-8">
             Basic information to help employers find and contact you.
           </p>

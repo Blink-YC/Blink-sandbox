@@ -102,7 +102,7 @@ export default function RoleSelectPage() {
           </div>
 
           {/* Title */}
-          <h2 className="text-xl font-bold text-gray-900 text-center mb-1">I'm an Employer</h2>
+          <h2 className="text-xl font-bold text-gray-900 text-center mb-1">I&apos;m an Employer</h2>
           <p className="text-sm text-gray-600 text-center mb-6">Post jobs and find qualified workers</p>
 
           {/* Features List */}
@@ -146,7 +146,7 @@ export default function RoleSelectPage() {
           </div>
 
           {/* Title */}
-          <h2 className="text-xl font-bold text-gray-900 text-center mb-1">I'm a Worker</h2>
+          <h2 className="text-xl font-bold text-gray-900 text-center mb-1">I&apos;m a Worker</h2>
           <p className="text-sm text-gray-600 text-center mb-6">Find jobs that match your skills</p>
 
           {/* Features List */}
@@ -179,7 +179,7 @@ export default function RoleSelectPage() {
       {/* Helper Text */}
       {!isAuthenticated && (
         <p className="text-sm text-gray-500 mt-6">
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <Link href="/auth/sign-up" className="text-blue-600 hover:text-blue-700 font-medium">
             Sign up here
           </Link>

@@ -67,7 +67,7 @@ export function SetupProfileClient({ initialRole }: { initialRole: Role }) {
     // Save current Step 2 form data to localStorage before going back
     if (formRef.current) {
       const formData = new FormData(formRef.current);
-      const step2Data: any = Object.fromEntries(formData.entries());
+      const step2Data: Record<string, unknown> = Object.fromEntries(formData.entries());
       
       console.log('📦 Raw form entries:', step2Data);
       
@@ -244,7 +244,7 @@ export function SetupProfileClient({ initialRole }: { initialRole: Role }) {
     // 🔵 Load Step 1 data from localStorage
     const step1Key = role === 'business' ? 'employer_onboarding_step1' : 'worker_onboarding_step1';
     const step1Data = localStorage.getItem(step1Key);
-    let step1 = step1Data ? JSON.parse(step1Data) : {};
+    const step1 = step1Data ? JSON.parse(step1Data) : {};
 
     console.log('💾 Saving complete onboarding data to database...');
     console.log('Step 1 data from localStorage:', step1);
@@ -669,7 +669,7 @@ export function SetupProfileClient({ initialRole }: { initialRole: Role }) {
             {/* Pro tip */}
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
               <p className="text-sm text-gray-700">
-                <span className="font-semibold text-gray-900">Pro tip:</span> You'll be able to add detailed work history, certifications, and project showcases in your profile settings after completing setup.
+                <span className="font-semibold text-gray-900">Pro tip:</span> You&apos;ll be able to add detailed work history, certifications, and project showcases in your profile settings after completing setup.
               </p>
             </div>
           </>
