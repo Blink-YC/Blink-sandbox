@@ -6,6 +6,7 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   const next = searchParams.get('next') || '/'
   const nextUrl = new URL(next, origin)
+  const roleParam = searchParams.get('role') as 'employer'|'worker' | null
   const roleFromNext = nextUrl.searchParams.get('role') as 'customer'|'worker'|'business' | null
 
   if (code) {
@@ -16,28 +17,70 @@ export async function GET(request: Request) {
       const { data: auth } = await supabase.auth.getUser()
       const user = auth.user
       if (user) {
-        // Prefer redirecting to portal if the selected role already exists (and ideally profile_done)
-        if (roleFromNext) {
-          const { data: urExact } = await supabase
+        // If there's a role parameter, check if user_roles entry exists
+        if (roleParam) {
+          const businessRole = roleParam === 'employer' ? 'business' : 'worker'
+          
+          // Check if role already exists
+          const { data: existingRole } = await supabase
             .from('user_roles')
-            .select('role, stage')
+            .select('*')
             .eq('user_id', user.id)
-            .eq('role', roleFromNext)
+            .eq('role', businessRole)
             .maybeSingle()
-          if (urExact && (urExact.stage === 'profile_done' || urExact.stage === 'basics_done' || urExact.stage === 'enabled')) {
-            return NextResponse.redirect(new URL(`/portal?role=${roleFromNext}`, origin))
+          
+          if (existingRole) {
+            // Role exists - check if they've completed onboarding
+            if (existingRole.stage === 'profile_done') {
+              // Already completed, go to portal
+              const portalUrl = businessRole === 'business' 
+                ? '/employer-portal' 
+                : businessRole === 'worker' 
+                ? '/worker-portal' 
+                : '/portal'
+              return NextResponse.redirect(new URL(portalUrl, origin))
+            } else {
+              // In progress, go to onboarding
+              return NextResponse.redirect(new URL(`/onboarding?role=${businessRole}`, origin))
+            }
+          } else {
+            // Role doesn't exist - create it and go to onboarding
+            await supabase.from('user_roles').insert({
+              user_id: user.id,
+              role: businessRole,
+              stage: 'enabled',
+              enabled_at: new Date().toISOString(),
+            })
+            return NextResponse.redirect(new URL(`/onboarding?role=${businessRole}`, origin))
           }
         }
-        // Otherwise, if any role is profile_done, send to that portal
-        const { data: anyDone } = await supabase
+        
+        // Get all user roles
+        const { data: roles } = await supabase
           .from('user_roles')
           .select('role, stage')
           .eq('user_id', user.id)
-          .in('stage', ['profile_done'])
-          .limit(1)
-        if (anyDone && anyDone.length > 0) {
-          return NextResponse.redirect(new URL(`/portal?role=${anyDone[0].role}`, origin))
+        
+        // Check if user has completed onboarding
+        const done = roles?.find(r => r.stage === 'profile_done')
+        if (done) {
+          // Redirect to the appropriate portal based on role
+          const portalUrl = done.role === 'business' 
+            ? '/employer-portal' 
+            : done.role === 'worker' 
+            ? '/worker-portal' 
+            : '/portal';
+          return NextResponse.redirect(new URL(portalUrl, origin))
         }
+        
+        // Check if user has selected a role (in progress)
+        const inProgress = roles?.find(r => r.stage === 'enabled' || r.stage === 'basics_done')
+        if (inProgress) {
+          return NextResponse.redirect(new URL(`/onboarding?role=${inProgress.role}`, origin))
+        }
+        
+        // User has no roles, redirect to role selector
+        return NextResponse.redirect(new URL('/auth/role-select', origin))
       }
     } catch {
       // ignore and continue to next

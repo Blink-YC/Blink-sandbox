@@ -63,3 +63,4 @@ CREATE TRIGGER update_demo_requests_updated_at
 -- Add comment to table
 COMMENT ON TABLE public.demo_requests IS 'Stores demo booking requests from the landing page';
 
+

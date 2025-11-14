@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { createClient } from "@/lib/supabase/client";
 import { StepProgress } from "@/components/StepProgress";
+import { EmployerOnboarding } from "./EmployerOnboarding";
+import { WorkerOnboarding } from "./WorkerOnboarding";
 
 /* ---- Minimal types ---- */
 type Role = "customer" | "worker" | "business";
@@ -36,6 +38,16 @@ type GoogleWindow = { google?: GoogleMaps };
 export default function OnboardingClient({ initialRole }: { initialRole: Role }) {
   const router = useRouter();
   const role = initialRole;
+  
+  // Use employer-specific onboarding for business role
+  if (role === "business") {
+    return <EmployerOnboarding />;
+  }
+  
+  // Use worker-specific onboarding for worker role
+  if (role === "worker") {
+    return <WorkerOnboarding />;
+  }
 
   const [firstName, setFirstName] = useState("");
   const [lastName,  setLastName]  = useState("");

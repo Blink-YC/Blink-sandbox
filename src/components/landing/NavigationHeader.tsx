@@ -36,7 +36,7 @@ export function NavigationHeader() {
             <Button
               variant="ghost"
               size="sm"
-              href="/auth/sign-in"
+              href="/auth/role-select"
               className="text-gray-700 hover:text-gray-900"
             >
               Sign In
